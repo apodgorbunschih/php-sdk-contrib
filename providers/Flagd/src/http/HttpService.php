@@ -82,6 +82,10 @@ class HttpService implements ServiceInterface
             return FlagdResponseResolutionDetailsAdapter::forTypeMismatch($details);
         }
 
+        if (FlagdResponseValidator::isDisabled($details)) {
+            return FlagdResponseResolutionDetailsAdapter::forDisabled($defaultValue);
+        }
+
         if (FlagdResponseValidator::isErrorResponse($details)) {
             return FlagdResponseResolutionDetailsAdapter::forError($details, $defaultValue);
         }

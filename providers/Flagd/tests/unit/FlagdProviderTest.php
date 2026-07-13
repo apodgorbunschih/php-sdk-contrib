@@ -149,4 +149,54 @@ class FlagdProviderTest extends TestCase
         $this->assertEquals($expectedVariant, $actualDetails->getVariant());
         $this->assertEquals($expectedReason, $actualDetails->getReason());
     }
+
+    public function testResolvesDefaultValueWhenFlagIsDisabled(): void
+    {
+        // Given
+        $expectedValue = true;
+
+        $mockRequest = $this->mockery(RequestInterface::class);
+        $mockRequest->shouldReceive('withHeader')->andReturn($mockRequest);
+        $mockRequest->shouldReceive('withBody')->andReturn($mockRequest);
+
+        $mockRequestFactory = $this->mockery(RequestFactoryInterface::class);
+        $mockRequestFactory->shouldReceive('createRequest')->andReturn($mockRequest);
+
+        $mockStream = $this->mockery(StreamInterface::class);
+
+        $mockStreamFactory = $this->mockery(StreamFactoryInterface::class);
+        $mockStreamFactory->shouldReceive('createStream')->andReturn($mockStream);
+
+        $mockResponse = $this->mockery(ResponseInterface::class);
+        $mockResponse->shouldReceive('getBody->__toString')->andReturn('{
+            "reason":"DISABLED"
+        }');
+
+        $mockClient = $this->mockery(ClientInterface::class);
+        $mockClient->shouldReceive('sendRequest')->with($mockRequest)->andReturn($mockResponse);
+
+        /** @var ClientInterface $client */
+        $client = $mockClient;
+        /** @var RequestFactoryInterface $requestFactory */
+        $requestFactory = $mockRequestFactory;
+        /** @var StreamFactoryInterface $streamFactory */
+        $streamFactory = $mockStreamFactory;
+
+        $config = ConfigFactory::fromOptions(
+            'localhost',
+            8013,
+            'http',
+            true,
+            new HttpConfig($client, $requestFactory, $streamFactory),
+        );
+
+        // When
+        $provider = new FlagdProvider($config);
+        $actualDetails = $provider->resolveBooleanValue('any-key', $expectedValue, null);
+
+        // Then
+        $this->assertEquals($expectedValue, $actualDetails->getValue());
+        $this->assertEquals('DISABLED', $actualDetails->getReason());
+        $this->assertNull($actualDetails->getError());
+    }
 }
